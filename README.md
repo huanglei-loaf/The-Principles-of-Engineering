@@ -1,74 +1,34 @@
-// COMTOOL.cpp : Defines the class behaviors for the application.
-//
+#include "stm32f103.h"
 
-#include "stdafx.h"
-#include "COMTOOL.h"
-#include "COMTOOLDlg.h"
-
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#undef THIS_FILE
-static char THIS_FILE[] = __FILE__;
-#endif
-
-/////////////////////////////////////////////////////////////////////////////
-// CCOMTOOLApp
-
-BEGIN_MESSAGE_MAP(CCOMTOOLApp, CWinApp)
-	//{{AFX_MSG_MAP(CCOMTOOLApp)
-		// NOTE - the ClassWizard will add and remove mapping macros here.
-		//    DO NOT EDIT what you see in these blocks of generated code!
-	//}}AFX_MSG
-	ON_COMMAND(ID_HELP, CWinApp::OnHelp)
-END_MESSAGE_MAP()
-
-/////////////////////////////////////////////////////////////////////////////
-// CCOMTOOLApp construction
-
-CCOMTOOLApp::CCOMTOOLApp()
+	
+void RCC_Init()
 {
-	// TODO: add construction code here,
-	// Place all significant initialization in InitInstance
+	RCC->APB2ENR|=((1<<2)|(1<<3)|(1<<14));   //enable Pa Pb Uart1
 }
-
-/////////////////////////////////////////////////////////////////////////////
-// The one and only CCOMTOOLApp object
-
-CCOMTOOLApp theApp;
-
-/////////////////////////////////////////////////////////////////////////////
-// CCOMTOOLApp initialization
-
-BOOL CCOMTOOLApp::InitInstance()
+void GPIO_Init()
 {
-	AfxEnableControlContainer();
-
-	// Standard initialization
-	// If you are not using these features and wish to reduce the size
-	//  of your final executable, you should remove from the following
-	//  the specific initialization routines you do not need.
-
-#ifdef _AFXDLL
-	Enable3dControls();			// Call this when using MFC in a shared DLL
-#else
-	Enable3dControlsStatic();	// Call this when linking to MFC statically
-#endif
-
-	CCOMTOOLDlg dlg;
-	m_pMainWnd = &dlg;
-	int nResponse = dlg.DoModal();
-	if (nResponse == IDOK)
+	GPIOA->CRL = 0x33333333; // A OUTPUT
+	GPIOB->CRL = 0x44444444;  //B INPUT
+	GPIOA->ODR = 0x0;  //A OUTPUT 0
+}
+void UART_Init()
+{
+	GPIOA->CRH=0x430;  //A10 INPUT; A9 OUTPUT
+	USART1->BRR=0x1f4; //set baud 16kbps
+	USART1->CR1=(1<<13)|(1<<3)|(1<<2); //ENABLE USART,TE,RE
+}
+int MAIN()
+{
+	RCC_Init();
+	GPIO_Init();
+	UART_Init();
+	while(1)
 	{
-		// TODO: Place code here to handle when the dialog is
-		//  dismissed with OK
+		if(USART1->SR&(0x1<<5)) //recieve data or not?
+		{		
+			GPIOA->ODR = USART1->DR; //GPIOA OUTPUT DATA
+			
+		}
 	}
-	else if (nResponse == IDCANCEL)
-	{
-		// TODO: Place code here to handle when the dialog is
-		//  dismissed with Cancel
-	}
-
-	// Since the dialog has been closed, return FALSE so that we exit the
-	//  application, rather than start the application's message pump.
-	return FALSE;
+	return 0;
 }
